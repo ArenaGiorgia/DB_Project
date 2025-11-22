@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # --- MICROSERVIZIO USER MANAGER ---
+  user-manager:
+    build: ./user_manager  # Costruisce usando il Dockerfile in questa cartella
+    container_name: user-manager
+    ports:
+      - "50051:50051" # gRPC esposto (opzionale, per debug)
+      - "5000:5000"   # REST API esposta per Postman
+    environment:
+      # URL di connessione al DB (useremo il nome del servizio 'user-db' come host)
+      - DATABASE_URL=postgresql://user:password@user-db:5432/userdb
+    depends_on:
+      - user-db
+    networks:
+      - app-network
+
+  # --- DATABASE USER (PostgreSQL) ---
+  user-db:
+    image: postgres:13
+    container_name: user-db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=userdb
+    ports:
+      - "5432:5432" # Esposto per controllarlo con tool esterni (DBeaver/Datagrip)
+    volumes:
+      - user_db_data:/var/lib/postgresql/data # Persistenza dati
+    networks:
+      - app-network
+
+  # --- MICROSERVIZIO DATA COLLECTOR ---
+  data-collector:
+    build: ./data_collector
+    container_name: data-collector
+    environment:
+      # Indirizzo dello User Manager (nome servizio : porta interna)
+      - USER_MANAGER_HOST=user-manager
+      - USER_MANAGER_PORT=50051
+      # Stringa connessione MongoDB
+      - MONGO_URI=mongodb://data-db:27017/
+    depends_on:
+      - user-manager
+      - data-db
+    networks:
+      - app-network
+
+  # --- DATABASE DATA (MongoDB - Esempio NoSQL) ---
+  data-db:
+    image: mongo:latest
+    container_name: data-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - data_db_data:/data/db
+    networks:
+      - app-network
+
+# Definizione della rete interna
+networks:
+  app-network:
+    driver: bridge
+
+# Definizione dei volumi per non perdere i dati se spegni i container
+volumes:
+  user_db_data:
+  data_db_data:

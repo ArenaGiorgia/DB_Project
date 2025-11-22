@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+// Definisce il pacchetto per evitare conflitti di nomi
+package userservice;
+
+// Definisce il Servizio: Le funzioni che si possono chiamare
+service UserManager {
+    // Il DataCollector invia una UserRequest e riceve una UserResponse
+    rpc CheckUserExists (UserRequest) returns (UserResponse);
+}
+
+// Definisce i messaggi (i dati in input)
+message UserRequest {
+    string email = 1; // L'email dell'utente da cercare
+}
+
+// Definisce i messaggi (i dati in output)
+message UserResponse {
+    bool exists = 1; // True se esiste, False se no
+}
