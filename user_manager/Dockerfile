@@ -1,24 +1,22 @@
-# Usa un'immagine Python leggera ufficiale
+# Usa immagine Python leggera
 FROM python:3.9-slim
 
-# Imposta la directory di lavoro dentro il container
+# Cartella di lavoro nel container
 WORKDIR /app
 
-# Copia il file dei requisiti e installa le dipendenze
-# (Facendolo prima di copiare il codice, sfruttiamo la cache di Docker)
+# Copia i requirements e installa
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia tutto il codice sorgente della cartella user_manager nel container
+# Copia tutto il codice (compresi cache.py, db_postgres.py, ecc)
 COPY . .
 
-# Esponi le porte:
-# 50051 per gRPC (comunicazione interna)
-# 5000 per REST API (se userai Flask)
-EXPOSE 50051 5000
+# Esponi le due porte: 5000 (Flask/Postman) e 50051 (gRPC)
+EXPOSE 5000
+EXPOSE 50051
 
-# Variabile d'ambiente per dire a Python di non bufferizzare l'output (utile per i log)
+# Fondamentale per vedere i print() nei log subito
 ENV PYTHONUNBUFFERED=1
 
-# Comando di avvio
-CMD ["python", "main.py"]
+# COMANDO DI AVVIO: Lancia app.py
+CMD ["python", "app.py"]

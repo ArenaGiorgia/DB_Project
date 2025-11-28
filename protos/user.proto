@@ -1,20 +1,16 @@
 syntax = "proto3";
 
-// Definisce il pacchetto per evitare conflitti di nomi
-package userservice;
-
-// Definisce il Servizio: Le funzioni che si possono chiamare
 service UserManager {
-    // Il DataCollector invia una UserRequest e riceve una UserResponse
-    rpc CheckUserExists (UserRequest) returns (UserResponse);
+  // Il Data Collector chiama questa funzione
+  rpc CheckUser (CheckUserRequest) returns (CheckUserResponse);
 }
 
-// Definisce i messaggi (i dati in input)
-message UserRequest {
-    string email = 1; // L'email dell'utente da cercare
+message CheckUserRequest {
+  string client_id = 1;  // il Data Collector vede chi è il client e sfrutta il canale parlando con lo user manager
+  string message_id = 2; // ID univoco della richiesta (UUID)
+  string email = 3;      // L'email da verificare
 }
 
-// Definisce i messaggi (i dati in output)
-message UserResponse {
-    bool exists = 1; // True se esiste, False se no
+message CheckUserResponse {
+  bool exists = 1;       // True se l'utente esiste, False altrimenti
 }
