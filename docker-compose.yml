@@ -46,8 +46,8 @@ services:
       # Qui diciamo al Data Collector dove trovare lo User Manager
       - USER_MANAGER_GRPC=user-manager:50051
       #credenziali di openSky
-      - OPENSKY_USER=${OPENSKY_USER}
-      - OPENSKY_PASSWORD=${OPENSKY_PASSWORD}
+      #- OPENSKY_USER=alessio1996A
+      #- OPENSKY_PASSWORD=Augusta11
     depends_on:
       - data-db
       - user-manager

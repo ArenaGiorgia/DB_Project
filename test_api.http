@@ -47,7 +47,13 @@ Content-Type: application/json
 }
 
 ###
+POST http://localhost:5001/interests
+Content-Type: application/json
 
+{
+  "email": "student@unict.it",
+  "airport": "LIRF"
+}
 ### 4. AGGIUNTA INTERESSE - UTENTE NON REGISTRATO (Test Sicurezza)
 # Proviamo con una mail falsa. Deve dare errore 403 (Forbidden) o 404.
 # Questo dimostra che il canale gRPC funziona.
@@ -69,8 +75,11 @@ GET http://localhost:5001/flights/last?airport=EGLL
 Accept: application/json
 
 ###
+GET http://localhost:5001/flights/last?airport=LIRF
+Accept: application/json
 
 ### 6. STATISTICA: MEDIA VOLI (Richiesta PDF)
 # Calcola la media dei voli registrati negli ultimi X giorni (es. 7 giorni).
 GET http://localhost:5001/flights/average?airport=EGLL&days=7
 Accept: application/json
+
