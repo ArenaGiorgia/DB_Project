@@ -1,0 +1,76 @@
+# ==========================================
+# TEST USER MANAGER (Microservizio 1)
+# ==========================================
+
+### 1. REGISTRAZIONE UTENTE (At-Most-Once su DB)
+# Crea l'utente. Senza questo, il Data Collector non ci farà passare.
+POST http://localhost:5000/users
+Content-Type: application/json
+
+{
+  "email": "student@unict.it",
+  "password": "passwordEsame2025",
+  "nome": "Mario",
+  "cognome": "Rossi"
+}
+
+###
+
+### 2. CANCELLAZIONE UTENTE (Richiesta PDF)
+# Testiamo se la cancellazione funziona (richiede password).
+# NOTA: Se esegui questo ora, dopo dovrai registrare di nuovo l'utente per continuare i test!
+DELETE http://localhost:5000/users
+Content-Type: application/json
+
+{
+  "email": "student@unict.it",
+  "password": "passwordEsame2025"
+}
+
+###
+
+
+# ==========================================
+# TEST DATA COLLECTOR (Microservizio 2)
+# ==========================================
+
+### 3. AGGIUNTA INTERESSE (Richiesta PDF)
+# L'utente dice: "Voglio monitorare Fiumicino (LIRF)".
+# Il Data Collector chiama User Manager via gRPC per verificare l'identità.
+# Se torna 200 OK, l'aeroporto viene aggiunto al monitoraggio ciclico.
+POST http://localhost:5001/interests
+Content-Type: application/json
+
+{
+  "email": "student@unict.it",
+  "airport": "EGLL"
+}
+
+###
+
+### 4. AGGIUNTA INTERESSE - UTENTE NON REGISTRATO (Test Sicurezza)
+# Proviamo con una mail falsa. Deve dare errore 403 (Forbidden) o 404.
+# Questo dimostra che il canale gRPC funziona.
+POST http://localhost:5001/interests
+Content-Type: application/json
+
+{
+  "email": "hacker@fake.it",
+  "airport": "EGLL"
+}
+
+###
+
+### 5. STATISTICA: ULTIMO VOLO (Richiesta PDF)
+# Recupera l'ultimo volo registrato nel database per LIRF.
+# Nota: Se il thread background non ha ancora scaricato nulla, potrebbe dare "Nessun dato".
+# Aspetta qualche secondo dopo aver aggiunto l'interesse.
+GET http://localhost:5001/flights/last?airport=EGLL
+Accept: application/json
+
+###
+
+### 6. STATISTICA: MEDIA VOLI (Richiesta PDF)
+# Calcola la media dei voli registrati negli ultimi X giorni (es. 7 giorni).
+GET http://localhost:5001/flights/average?airport=EGLL&days=7
+Accept: application/json

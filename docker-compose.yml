@@ -45,6 +45,9 @@ services:
       - MONGO_URL=mongodb://data-db:27017/
       # Qui diciamo al Data Collector dove trovare lo User Manager
       - USER_MANAGER_GRPC=user-manager:50051
+      #credenziali di openSky
+      - OPENSKY_USER=${OPENSKY_USER}
+      - OPENSKY_PASSWORD=${OPENSKY_PASSWORD}
     depends_on:
       - data-db
       - user-manager

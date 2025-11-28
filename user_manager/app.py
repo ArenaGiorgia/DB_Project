@@ -105,7 +105,7 @@ def register():
 
             #Inserisco l'utente
             cursor.execute(
-                "INSERT INTO users (email, nome, cognome) VALUES (%s, %s, %s)",
+                "INSERT INTO users (email, password, nome, cognome) VALUES (%s, %s, %s, %s)",
                 (email,pw_hash, nome, cognome)
             )
 

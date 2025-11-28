@@ -26,8 +26,7 @@ if _version_not_supported:
 
 
 class UserManagerStub(object):
-    """Definisce il Servizio: Le funzioni che si possono chiamare
-    """
+    """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
         """Constructor.
@@ -35,19 +34,18 @@ class UserManagerStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.CheckUserExists = channel.unary_unary(
-                '/userservice.UserManager/CheckUserExists',
-                request_serializer=user__pb2.UserRequest.SerializeToString,
-                response_deserializer=user__pb2.UserResponse.FromString,
+        self.CheckUser = channel.unary_unary(
+                '/UserManager/CheckUser',
+                request_serializer=user__pb2.CheckUserRequest.SerializeToString,
+                response_deserializer=user__pb2.CheckUserResponse.FromString,
                 _registered_method=True)
 
 
 class UserManagerServicer(object):
-    """Definisce il Servizio: Le funzioni che si possono chiamare
-    """
+    """Missing associated documentation comment in .proto file."""
 
-    def CheckUserExists(self, request, context):
-        """Il DataCollector invia una UserRequest e riceve una UserResponse
+    def CheckUser(self, request, context):
+        """Il Data Collector chiama questa funzione
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -56,25 +54,24 @@ class UserManagerServicer(object):
 
 def add_UserManagerServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'CheckUserExists': grpc.unary_unary_rpc_method_handler(
-                    servicer.CheckUserExists,
-                    request_deserializer=user__pb2.UserRequest.FromString,
-                    response_serializer=user__pb2.UserResponse.SerializeToString,
+            'CheckUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckUser,
+                    request_deserializer=user__pb2.CheckUserRequest.FromString,
+                    response_serializer=user__pb2.CheckUserResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'userservice.UserManager', rpc_method_handlers)
+            'UserManager', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('userservice.UserManager', rpc_method_handlers)
+    server.add_registered_method_handlers('UserManager', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
 class UserManager(object):
-    """Definisce il Servizio: Le funzioni che si possono chiamare
-    """
+    """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def CheckUserExists(request,
+    def CheckUser(request,
             target,
             options=(),
             channel_credentials=None,
@@ -87,9 +84,9 @@ class UserManager(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/userservice.UserManager/CheckUserExists',
-            user__pb2.UserRequest.SerializeToString,
-            user__pb2.UserResponse.FromString,
+            '/UserManager/CheckUser',
+            user__pb2.CheckUserRequest.SerializeToString,
+            user__pb2.CheckUserResponse.FromString,
             options,
             channel_credentials,
             insecure,
