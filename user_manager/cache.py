@@ -42,6 +42,16 @@ class Cache:
                 'timestamp': time.time()  # segno l'orario di arrivo
             }
 
+    def remove_response(self, client_id, message_id):
+
+        key = f"{client_id}:{message_id}"
+        with self.lock:
+            if key in self.cache:
+                del self.cache[key]
+                print(f"[CACHE] Rimossa chiave obsoleta: {key}")
+
+
+
     def pulisci_cache(self):
         #controlla sempre e  ogni 60 secondi cancella le cose vecchie di 5 minuti
         while True:

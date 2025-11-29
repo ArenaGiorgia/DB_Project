@@ -76,16 +76,16 @@ def fetch_opensky_data(airport):
 
 # --- BACKGROUND TASK  ---
 def monitoraggio_ciclico():
-    print(">>> Avvio Thread Monitoraggio Ciclico...")
+    print("Avvio Thread Monitoraggio Ciclico...")
     while True:
         try:
             aeroporti = mongo_db.get_tutti_aeroporti_monitorati()
             if aeroporti:
-                print(f"[BACKGROUND] Aggiornamento per: {aeroporti}")
+                print(f"Aggiornamento per: {aeroporti}")
                 for airport in aeroporti:
                     voli = fetch_opensky_data(airport)
                     mongo_db.salva_voli(airport, voli)
-                    print(f"[BACKGROUND] Dati aggiornati per {airport}")
+                    print(f"Dati aggiornati per {airport}")
 
             # Attesa ciclo (es. 10 minuti)
             time.sleep(600)
@@ -131,7 +131,7 @@ def add_interest():
     mongo_db.aggiungi_interesse(email, airport)
 
     # 3. Download IMMEDIATO (con logica Mock se fallisce)
-    print(f"[DC] Download immediato dati per {airport}...")
+    print(f"Download immediato dati per {airport}...")
     voli = fetch_opensky_data(airport)  # Ora questa funzione ritorna Mock se OpenSky fallisce
     mongo_db.salva_voli(airport, voli)
 
@@ -176,5 +176,5 @@ def get_average_flights():
 if __name__ == '__main__':
     bg_thread = threading.Thread(target=monitoraggio_ciclico, daemon=True)
     bg_thread.start()
-    print(">>> Data Collector attivo sulla porta 5001...")
+    print("Data Collector attivo sulla porta 5001...")
     app.run(host='0.0.0.0', port=5001, debug=True)
