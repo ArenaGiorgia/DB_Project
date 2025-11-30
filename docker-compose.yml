@@ -43,11 +43,9 @@ services:
       - "5001:5001"         # Mappa la porta 5001 del container alla 5001 del PC (per Postman)
     environment:
       - MONGO_URL=mongodb://data-db:27017/
-      # Qui diciamo al Data Collector dove trovare lo User Manager
       - USER_MANAGER_GRPC=user-manager:50051
-      #credenziali di openSky
-      #- OPENSKY_USER=alessio1996A
-      #- OPENSKY_PASSWORD=Augusta11
+      - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
+      - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
     depends_on:
       - data-db
       - user-manager

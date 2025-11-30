@@ -15,38 +15,78 @@ app = Flask(__name__)
 
 USER_MANAGER_ADDRESS = os.getenv("USER_MANAGER_GRPC", "localhost:50051")
 MY_CLIENT_ID = "data_collector_service"
-OPENSKY_USER = os.getenv("OPENSKY_USER")
-OPENSKY_PASSWORD = os.getenv("OPENSKY_PASSWORD")
+
+# --- MODIFICA CONFIGURAZIONE: Ora usiamo Client ID e Secret per il Token ---
+OPENSKY_CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID")
+OPENSKY_CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET")
+AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+
+
+# --- NUOVA FUNZIONE: Recupero Token OpenSky ---
+def get_opensky_token():
+    """
+    Richiede un Token di accesso temporaneo a OpenSky usando il Client Credentials Flow.
+    Restituisce il token stringa o None se fallisce.
+    """
+    if not OPENSKY_CLIENT_ID or not OPENSKY_CLIENT_SECRET:
+        print("[OpenSky Auth] Client ID o Secret mancanti. Uso accesso anonimo (limitato).")
+        return None
+
+    payload = {
+        "grant_type": "client_credentials",
+        "client_id": OPENSKY_CLIENT_ID,
+        "client_secret": OPENSKY_CLIENT_SECRET
+    }
+
+    try:
+        # Facciamo una POST all'URL di autenticazione
+        r = requests.post(AUTH_URL, data=payload, timeout=5)
+        if r.status_code == 200:
+            token = r.json().get("access_token")
+            return token
+        else:
+            print(f"[OpenSky Auth Error] Status {r.status_code}: {r.text}")
+            return None
+    except Exception as e:
+        print(f"[OpenSky Auth Exception] {e}")
+        return None
 
 
 # --- FUNZIONE HELPER PER OPENSKY MODIFICATA ---
 def fetch_opensky_data(airport):
     """
-    Scarica dati da OpenSky.
-    MODIFICA: Finestra temporale allargata e gestione Mock data.
+    Scarica dati da OpenSky usando il Bearer Token.
     """
     ora_fine = int(time.time())
-    # MODIFICA 1: Cerchiamo nelle ultime 24 ore (86400 sec) invece di 1 ora
-    # Questo aggira il problema del ritardo nei dati dell'API gratuita.
+    # Cerchiamo nelle ultime 24 ore (7200 modificato a 86400 se vuoi 24h reali, qui ho lasciato il tuo 7200)
+    # Nota: 7200 secondi sono 2 ore. Se vuoi 24 ore metti 86400.
     ora_inizio = ora_fine - 7200
 
     url = "https://opensky-network.org/api/flights/departure"
     params = {'airport': airport, 'begin': ora_inizio, 'end': ora_fine}
 
-    auth_data = None
-    if OPENSKY_USER and OPENSKY_PASSWORD:
-        auth_data = (OPENSKY_USER, OPENSKY_PASSWORD)
+    # --- MODIFICA AUTENTICAZIONE ---
+    # Recuperiamo il token fresco
+    token = get_opensky_token()
+
+    # Costruiamo gli headers
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+        print(f"[OpenSky] Token ottenuto, eseguo richiesta autenticata per {airport}...")
+    else:
+        print(f"[OpenSky] Token non disponibile, eseguo richiesta anonima per {airport}...")
 
     try:
-        print(f"[OpenSky] Richiesta dati per {airport} (ultime 24h)...")
-        r = requests.get(url, params=params, auth=auth_data, timeout=10)
+        # Passiamo 'headers' invece di 'auth'
+        r = requests.get(url, params=params, headers=headers, timeout=10)
 
         if r.status_code == 200:
             dati = r.json()
             if dati:
                 return dati
             else:
-                print(f"[OpenSky] Nessun volo trovato per {airport} nelle ultime 24h.")
+                print(f"[OpenSky] Nessun volo trovato per {airport} nel periodo richiesto.")
         else:
             print(f"[OpenSky Error] Status {r.status_code}: {r.text}")
 
@@ -54,8 +94,6 @@ def fetch_opensky_data(airport):
         print(f"[OpenSky Exception] {e}")
 
     # MODIFICA 2: FALLBACK / MOCK DATA
-    # Se l'API fallisce o è vuota, generiamo un dato finto per permettere
-    # il test delle API REST (GET /last) e dimostrare il funzionamento del sistema.
     print(f"[SYSTEM] Generazione dati MOCK per {airport} (per scopi dimostrativi)...")
     mock_flight = [{
         "icao24": "mock_id",
@@ -110,7 +148,6 @@ def add_interest():
         with grpc.insecure_channel(USER_MANAGER_ADDRESS) as channel:
             stub = user_pb2_grpc.UserManagerStub(channel)
 
-
             grpc_req = user_pb2.CheckUserRequest(
                 client_id=MY_CLIENT_ID,
                 message_id=messaggio_univoco,
@@ -126,7 +163,6 @@ def add_interest():
 
         print(f"Errore gRPC reale: {e}")
 
-        # Se vuoi gestire specifici codici di errore reali (es. UNAVAILABLE)
         if e.code() == grpc.StatusCode.UNAVAILABLE:
             return jsonify({"errore": "User Manager non raggiungibile"}), 503
 
@@ -135,9 +171,9 @@ def add_interest():
     # 2. Aggiunge l'interesse nel Data DB
     mongo_db.aggiungi_interesse(email, airport)
 
-    # 3. Download IMMEDIATO (con logica Mock se fallisce)
+    # 3. Download IMMEDIATO
     print(f"Download immediato dati per {airport}...")
-    voli = fetch_opensky_data(airport)  # Ora questa funzione ritorna Mock se OpenSky fallisce
+    voli = fetch_opensky_data(airport)
     mongo_db.salva_voli(airport, voli)
 
     return jsonify({"messaggio": f"Interesse aggiunto e dati iniziali recuperati per {airport}"}), 200
@@ -150,7 +186,6 @@ def get_last_flight():
 
     volo = mongo_db.get_ultimo_volo(airport)
     if volo:
-        # Converto ObjectId se presente o pulisco dati interni
         if '_id' in volo: del volo['_id']
         return jsonify(volo), 200
 
