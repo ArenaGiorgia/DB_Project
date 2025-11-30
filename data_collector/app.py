@@ -109,23 +109,28 @@ def add_interest():
     try:
         with grpc.insecure_channel(USER_MANAGER_ADDRESS) as channel:
             stub = user_pb2_grpc.UserManagerStub(channel)
-            # Nota: Assicurati che il metodo nel proto si chiami CheckUser o GetUser
-            # Adatto al tuo codice precedente che usava GetUserRequest
-            try:
-                # Provo con la struttura che avevi nel codice precedente (GetUser)
-                grpc_req = user_pb2.GetUserRequest(email=email)
-                stub.GetUser(grpc_req)  # Se non da eccezione, esiste (o ritorna oggetto)
-            except AttributeError:
-                # Fallback se hai cambiato il proto in CheckUser
-                grpc_req = user_pb2.CheckUserRequest(client_id=MY_CLIENT_ID, message_id=messaggio_univoco, email=email)
-                res = stub.CheckUser(grpc_req)
-                if not res.exists: raise grpc.RpcError()
+
+
+            grpc_req = user_pb2.CheckUserRequest(
+                client_id=MY_CLIENT_ID,
+                message_id=messaggio_univoco,
+                email=email
+            )
+
+            risposta = stub.CheckUser(grpc_req)
+
+            if not risposta.exists:
+                return jsonify({"errore": "Utente non registrato"}), 404
 
     except grpc.RpcError as e:
-        # Se lo status è NOT_FOUND o altro errore gRPC
-        if e.code() == grpc.StatusCode.NOT_FOUND:
-            return jsonify({"errore": "Utente non registrato"}), 404
-        return jsonify({"errore": f"Errore comunicazione gRPC: {e}"}), 500
+
+        print(f"Errore gRPC reale: {e}")
+
+        # Se vuoi gestire specifici codici di errore reali (es. UNAVAILABLE)
+        if e.code() == grpc.StatusCode.UNAVAILABLE:
+            return jsonify({"errore": "User Manager non raggiungibile"}), 503
+
+        return jsonify({"errore": f"Errore comunicazione gRPC: {e.details()}"}), 500
 
     # 2. Aggiunge l'interesse nel Data DB
     mongo_db.aggiungi_interesse(email, airport)
@@ -149,7 +154,7 @@ def get_last_flight():
         if '_id' in volo: del volo['_id']
         return jsonify(volo), 200
 
-    return jsonify({"messaggio": "Nessun dato trovato (nemmeno mock)"}), 404
+    return jsonify({"messaggio": "Nessun dato trovato"}), 404
 
 
 @app.route('/flights/average', methods=['GET'])

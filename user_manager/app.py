@@ -181,7 +181,7 @@ def delete_user():
                     global_cache.remove_response("REST_CLIENT", request_id)
                 # ----------------------------
 
-                return jsonify({"utente con email": email + "eliminato"}), 200
+                return jsonify({"utente con email": email + " eliminato"}), 200
             else:
                 abort(401, description="Credenziali errate o utente inesistente")
 
