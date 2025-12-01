@@ -14,3 +14,14 @@ message CheckUserRequest {
 message CheckUserResponse {
   bool exists = 1;       // True se l'utente esiste, False altrimenti
 }
+service DataCollector {
+  rpc DeleteData (DeleteDataRequest) returns (DeleteDataResponse);
+}
+
+message DeleteDataRequest {
+  string email = 1;
+}
+
+message DeleteDataResponse {
+  bool success = 1;
+}

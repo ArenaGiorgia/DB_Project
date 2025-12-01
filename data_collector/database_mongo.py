@@ -18,24 +18,23 @@ class MongoDB:
             try:
                 self.client = MongoClient(MONGO_URL, serverSelectionTimeoutMS=5000)
                 self.client.admin.command('ping')
-                print("[MONGO] Connessione riuscita")
+                print("Connessione riuscita con MONGO")
                 self.db = self.client["flight_db"]
                 # Creo indici per velocizzare le ricerche
                 self.db.flights.create_index("airport")
                 self.db.flights.create_index("timestamp")
                 return
             except ConnectionFailure:
-                print("Tentativo di riconnessione Mongo...")
+                print("Tentativo di riconnessione con MONGO...")
                 time.sleep(3)
                 tentativi -= 1
-        print("[MONGO] Impossibile connettersi.")
+        print("Impossibile connettersi con MONGO.")
 
-    # --- FUNZIONI DI SCRITTURA ---
 
     def aggiungi_interesse(self, email, aeroporto):
-        """Salva l'interesse dell'utente per un aeroporto [cite: 24, 38]"""
+
         if self.db is None: return False
-        # Usa 'update_one' con upsert=True per evitare duplicati
+        # update_one' con upsert=True per evitare duplicati
         self.db.interests.update_one(
             {"user": email, "airport": aeroporto},
             {"$set": {"user": email, "airport": aeroporto}},
@@ -46,18 +45,18 @@ class MongoDB:
 
     #per il delete quando togliamo un utente
     def rimuovi_interessi_utente(self, email):
-            """Cancella tutti gli interessi associati a una email specifica"""
+
             if self.db is None: return 0
 
-            # delete_many cancella TUTTI i documenti che matchano il filtro
             result = self.db.interests.delete_many({"user": email})
-            print(f"[MONGO] Cancellati {result.deleted_count} interessi per {email}")
+            print(f"Cancellati {result.deleted_count} interessi per {email}")
             return result.deleted_count
 
 
 
     def salva_voli(self, aeroporto, voli):
-        """Salva i dati scaricati dal monitoraggio ciclico """
+
+        #Salva i dati scaricati dal monitoraggio ciclico
         if self.db is None: return None
         documento = {
             "airport": aeroporto,
@@ -68,18 +67,16 @@ class MongoDB:
         res = self.db.flights.insert_one(documento)
         return str(res.inserted_id)
 
-    # --- FUNZIONI DI LETTURA (PER MONITORAGGIO) ---
 
     def get_tutti_aeroporti_monitorati(self):
-        """Restituisce la lista degli aeroporti unici che interessano agli utenti"""
+        #Restituisce la lista degli aeroporti unici che interessano agli utenti
         if self.db is None: return []
         # Distinct mi dà la lista degli aeroporti senza duplicati
         return self.db.interests.distinct("airport")
 
-    # --- FUNZIONI DI STATISTICA [cite: 43] ---
 
     def get_ultimo_volo(self, aeroporto):
-        """Recupera l'ultimo volo registrato per un aeroporto """
+        #Recupera l'ultimo volo registrato per un aeroporto
         if self.db is None: return None
 
         # Cerca l'ultimo inserimento (sort timestamp decrescente)
@@ -94,19 +91,19 @@ class MongoDB:
         return None
 
     def get_media_voli(self, aeroporto, giorni):
-        """Calcola la media voli degli ultimi X giorni [cite: 45, 46]"""
+        #Calcola la media voli degli ultimi X giorni [cite: 45, 46]
         if self.db is None: return 0
 
         now = time.time()
         limite_tempo = now - (giorni * 86400)  # 86400 secondi in un giorno
 
         pipeline = [
-            # 1. Filtra documenti di quell'aeroporto negli ultimi X giorni
+            #Filtra documenti di quell'aeroporto negli ultimi X giorni
             {"$match": {
                 "airport": aeroporto,
                 "timestamp": {"$gte": limite_tempo}
             }},
-            # 2. Somma il numero di voli trovati
+            #Somma il numero di voli trovati
             {"$group": {
                 "_id": None,
                 "totale_voli": {"$sum": "$count"}
@@ -122,12 +119,7 @@ class MongoDB:
         return round(totale_voli / giorni, 2)
 
     def get_voli_di_interesse_utente(self, email):
-        """
-        Simula la query:
-        SELECT * FROM flights
-        JOIN interests ON flights.airport = interests.airport
-        WHERE interests.user = email
-        """
+
         if self.db is None: return []
 
         # PASSO 1: Trova gli aeroporti seguiti dall'utente

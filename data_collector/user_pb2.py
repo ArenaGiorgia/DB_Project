@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nuser.proto\"H\n\x10\x43heckUserRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x12\n\nmessage_id\x18\x02 \x01(\t\x12\r\n\x05\x65mail\x18\x03 \x01(\t\"#\n\x11\x43heckUserResponse\x12\x0e\n\x06\x65xists\x18\x01 \x01(\x08\x32\x41\n\x0bUserManager\x12\x32\n\tCheckUser\x12\x11.CheckUserRequest\x1a\x12.CheckUserResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nuser.proto\"H\n\x10\x43heckUserRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x12\n\nmessage_id\x18\x02 \x01(\t\x12\r\n\x05\x65mail\x18\x03 \x01(\t\"#\n\x11\x43heckUserResponse\x12\x0e\n\x06\x65xists\x18\x01 \x01(\x08\"\"\n\x11\x44\x65leteDataRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\"%\n\x12\x44\x65leteDataResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\x41\n\x0bUserManager\x12\x32\n\tCheckUser\x12\x11.CheckUserRequest\x1a\x12.CheckUserResponse2F\n\rDataCollector\x12\x35\n\nDeleteData\x12\x12.DeleteDataRequest\x1a\x13.DeleteDataResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,6 +35,12 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_CHECKUSERREQUEST']._serialized_end=86
   _globals['_CHECKUSERRESPONSE']._serialized_start=88
   _globals['_CHECKUSERRESPONSE']._serialized_end=123
-  _globals['_USERMANAGER']._serialized_start=125
-  _globals['_USERMANAGER']._serialized_end=190
+  _globals['_DELETEDATAREQUEST']._serialized_start=125
+  _globals['_DELETEDATAREQUEST']._serialized_end=159
+  _globals['_DELETEDATARESPONSE']._serialized_start=161
+  _globals['_DELETEDATARESPONSE']._serialized_end=198
+  _globals['_USERMANAGER']._serialized_start=200
+  _globals['_USERMANAGER']._serialized_end=265
+  _globals['_DATACOLLECTOR']._serialized_start=267
+  _globals['_DATACOLLECTOR']._serialized_end=337
 # @@protoc_insertion_point(module_scope)

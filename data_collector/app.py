@@ -5,31 +5,46 @@ import threading
 import requests
 import grpc
 from flask import Flask, request, jsonify
-
-# Import locali
 import user_pb2
 import user_pb2_grpc
+from concurrent import futures
 from database_mongo import mongo_db
 
 app = Flask(__name__)
 
 USER_MANAGER_ADDRESS = os.getenv("USER_MANAGER_GRPC", "localhost:50051")
 MY_CLIENT_ID = "data_collector_service"
-
-# --- MODIFICA CONFIGURAZIONE: Ora usiamo Client ID e Secret per il Token ---
 OPENSKY_CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID")
 OPENSKY_CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET")
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
 
-# --- NUOVA FUNZIONE: Recupero Token OpenSky ---
+#server gRPC che diventa il DATA-COLLECTOR in caso di eliminazione degli utenti con interessi
+class DataCollectorGRPC(user_pb2_grpc.DataCollectorServicer):
+    def DeleteData(self, request, context):
+        email = request.email
+        print(f"Richiesta cancellazione dati per: {email}")
+
+        count = mongo_db.rimuovi_interessi_utente(email)
+
+        return user_pb2.DeleteDataResponse(success=True)
+
+
+def start_grpc_server():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    user_pb2_grpc.add_DataCollectorServicer_to_server(DataCollectorGRPC(), server)
+
+    #Usiamo una porta diversa dallo User Manager (es. 50052)
+    port = 50052
+    server.add_insecure_port(f'[::]:{port}')
+    print(f"Data Collector gRPC Server attivo sulla porta {port}")
+    server.start()
+    server.wait_for_termination()
+
 def get_opensky_token():
-    """
-    Richiede un Token di accesso temporaneo a OpenSky usando il Client Credentials Flow.
-    Restituisce il token stringa o None se fallisce.
-    """
+
     if not OPENSKY_CLIENT_ID or not OPENSKY_CLIENT_SECRET:
-        print("[OpenSky Auth] Client ID o Secret mancanti. Uso accesso anonimo (limitato).")
+        print(" Client ID o Secret mancanti.")
         return None
 
     payload = {
@@ -260,5 +275,9 @@ def get_my_interest_flights():
 if __name__ == '__main__':
     bg_thread = threading.Thread(target=monitoraggio_ciclico, daemon=True)
     bg_thread.start()
-    print("Data Collector attivo sulla porta 5001...")
-    app.run(host='0.0.0.0', port=5001, debug=True)
+
+    grpc_thread = threading.Thread(target=start_grpc_server, daemon=True)
+    grpc_thread.start()
+
+    print("Data Collector attivo sulla porta 5001 per FLASK e 5002 per il canale grpc")
+    app.run(host='0.0.0.0', port=5001, debug=False)

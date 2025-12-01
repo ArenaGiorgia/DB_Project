@@ -41,6 +41,7 @@ services:
     container_name: data_collector_service
     ports:
       - "5001:5001"         # Mappa la porta 5001 del container alla 5001 del PC (per Postman)
+      - "50052:50052"
     environment:
       - MONGO_URL=mongodb://data-db:27017/
       - USER_MANAGER_GRPC=user-manager:50051

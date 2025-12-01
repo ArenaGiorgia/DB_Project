@@ -2,7 +2,6 @@ import threading
 import grpc
 from concurrent import futures
 from flask import Flask, request, jsonify, abort
-import requests
 import hashlib
 import user_pb2
 import user_pb2_grpc
@@ -16,13 +15,15 @@ global_cache = Cache(ttl_seconds=300)
 #Definisco il server Flask che risponde a POSTMAN
 app = Flask(__name__)
 
+DATA_COLLECTOR_GRPC = "data-collector:50052"
+
 #Definisco il Server gRPC (Risponde al Data Collector)
 class UserManagerGRPC(user_pb2_grpc.UserManagerServicer):
 
     def CheckUser(self, request, context):
     #Questa funzione viene chiamata dal Data Collector. Mi dice se l'utente con i suoi dati si trova in memoria.
 
-        client_id = request.client_id    #è riferito al servizio che in questo caso nostro è il datacollector
+        client_id = request.client_id #è riferito al servizio che in questo caso nostro è il datacollector
         message_id = request.message_id
         email = request.email
 
@@ -92,8 +93,8 @@ def register():
         return jsonify({"errore": "Manca l'header Request-ID per At-Most-Once"}), 400
 
     # 2. Controllo se ho già risposto a questo ID dentro la cache
-    # Uso "REST_CLIENT" come identificativo fittizio per Postman
-    cache_resp = global_cache.get_response("REST_CLIENT", request_id)
+    #utilizzo il DATA_COLLECTOR come client per identificare quel microservizio
+    cache_resp = global_cache.get_response("DATA_COLLECTOR", request_id)
     if cache_resp:
         print(f"Mi hai mandato gia la stessa request, ti prendo il dato conservato nella mia cache.")
         # Restituisco la risposta salvata (Status Code e Body)
@@ -118,7 +119,7 @@ def register():
 
             cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             if cursor.fetchone():
-                return jsonify("Utente gia registrato"), 200
+                return jsonify("Utente gia registrato / Vai al login"), 200
 
             pw_hash = hashlib.sha256(password.encode()).hexdigest()
 
@@ -136,7 +137,7 @@ def register():
             status_code = 201
 
             # Salvo in cache per futuri retry con lo stesso ID
-            global_cache.save_response("REST_CLIENT", request_id, {'body': response_body, 'status': status_code})
+            global_cache.save_response("DATA_COLLECTOR", request_id, {'body': response_body, 'status': status_code})
 
 
             return jsonify(response_body), status_code
@@ -177,35 +178,54 @@ def delete_user():
             conn.commit()
 
             if cur.rowcount > 0:
-                # 2. PULIZIA CACHE (At-Most-Once)
-                if request_id:
-                    global_cache.remove_response("REST_CLIENT", request_id)
 
-                # 3. PULIZIA DATI ORFANI (Chiama Data Collector)
+                if request_id:
+                    # Chiamo la funzione modificata
+                    esito = global_cache.remove_response("DATA_COLLECTOR", request_id)
+
+                    if esito:
+                        print(f"Cache pulita correttamente per ID {request_id}")
+                    else:
+                        print(f"Nessuna cache trovata per ID {request_id}")
                 try:
-                    # 'data-collector' è il nome del servizio nel docker-compose
-                    url_clean = f"http://data-collector:5001/interests?email={email}"
-                    print(f"[CLEANUP] Richiedo cancellazione interessi a: {url_clean}")
-                    requests.delete(url_clean, timeout=2)
+                    # Ci connettiamo alla porta 50052 che abbiamo configurato nel Data Collector
+                    target_grpc = 'data-collector:50052'
+
+                    with grpc.insecure_channel(target_grpc) as channel:
+                        stub = user_pb2_grpc.DataCollectorStub(channel)
+
+                        # Creo la richiesta gRPC
+                        request_grpc = user_pb2.DeleteDataRequest(email=email)
+
+                        # Chiamo la funzione remota
+                        response = stub.DeleteData(request_grpc)
+
+                        print(f"Richiesta inviata per {email}. Successo: {response.success}")
+
+                except grpc.RpcError as e:
+                    # Se il Data Collector è giù, stampiamo solo un warning
+                    print(f"Errore gRPC verso Data Collector: {e}")
                 except Exception as e:
-                    # Se il Data Collector è giù, stampiamo solo un warning,
-                    # non blocchiamo la cancellazione dell'utente.
-                    print(f"[WARNING] Impossibile pulire interessi su Data Collector: {e}")
+                    print(f"Errore generico pulizia dati: {e}")
 
                 return jsonify({"message": "Utente eliminato e dati puliti", "email": email}), 200
             else:
-                abort(401, description="Credenziali errate o utente inesistente")
+                # --- CORREZIONE QUI ---
+                # 1. Stampo a video (Log del server)
+                print(f"[DELETE FAIL] Utente {email} non trovato nel DB o password errata.")
+
+                # 2. Restituisco una risposta JSON valida a Postman (così eviti l'HTML)
+                return jsonify({"errore": "Utente non trovato o credenziali errate"}), 401
 
         finally:
             cur.close()
 
     except Exception as e:
-        if "401" in str(e): abort(401, description="Credenziali errate")
-        abort(500, description=str(e))
+        # Gestione errori generici del server
+        print(f"[SERVER ERROR] {str(e)}")
+        return jsonify({"errore": f"Errore interno del server: {str(e)}"}), 500
     finally:
         if conn: conn.close()
-
-
 
 if __name__ == '__main__':
 

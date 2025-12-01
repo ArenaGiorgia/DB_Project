@@ -48,8 +48,11 @@ class Cache:
         with self.lock:
             if key in self.cache:
                 del self.cache[key]
-                print(f"[CACHE] Rimossa chiave obsoleta: {key}")
-
+                print(f"Rimossa chiave obsoleta: {key}")
+                return True
+            else:
+                print(f"Tentativo di rimuovere chiave inesistente: {key}")
+                return False
 
 
     def pulisci_cache(self):
@@ -65,4 +68,12 @@ class Cache:
 
                 for k in keys_to_delete:
                     del self.cache[k]
-                    print(f"Cancellato il messaggio scaduto: {k}")
+                    # --- MODIFICA ESTETICA PER I LOG ---
+                    # La chiave k è tipo "REST_CLIENT:a1b2-c3d4..."
+                    # Faccio lo split sui due punti ':' e prendo la parte [1] (la seconda parte)
+                    try:
+                        request_id = k.split(':', 1)[1]
+                        print(f"Ho eliminato il Request-ID scaduto: {request_id}")
+                    except IndexError:
+                        # Fallback se per caso la chiave non ha i due punti (non dovrebbe succedere)
+                        print(f"Eliminato: {k}")
