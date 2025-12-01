@@ -43,6 +43,19 @@ class MongoDB:
         )
         return True
 
+
+    #per il delete quando togliamo un utente
+    def rimuovi_interessi_utente(self, email):
+            """Cancella tutti gli interessi associati a una email specifica"""
+            if self.db is None: return 0
+
+            # delete_many cancella TUTTI i documenti che matchano il filtro
+            result = self.db.interests.delete_many({"user": email})
+            print(f"[MONGO] Cancellati {result.deleted_count} interessi per {email}")
+            return result.deleted_count
+
+
+
     def salva_voli(self, aeroporto, voli):
         """Salva i dati scaricati dal monitoraggio ciclico """
         if self.db is None: return None
@@ -108,5 +121,41 @@ class MongoDB:
         # Media = Totale Voli / Giorni
         return round(totale_voli / giorni, 2)
 
+    def get_voli_di_interesse_utente(self, email):
+        """
+        Simula la query:
+        SELECT * FROM flights
+        JOIN interests ON flights.airport = interests.airport
+        WHERE interests.user = email
+        """
+        if self.db is None: return []
+
+        # PASSO 1: Trova gli aeroporti seguiti dall'utente
+        # Equivalente a: SELECT airport FROM interests WHERE user = email
+        interessi_cursor = self.db.interests.find({"user": email})
+        lista_aeroporti = [doc["airport"] for doc in interessi_cursor]
+
+        if not lista_aeroporti:
+            return []  # L'utente non segue nessun aeroporto
+
+        # PASSO 2: Trova tutti i voli che matchano quegli aeroporti
+        # Equivalente a: SELECT * FROM flights WHERE airport IN (lista_aeroporti)
+
+        # Nota: Qui potremmo mettere un limite temporale (es. ultimi 7 giorni)
+        # ma per ora prendiamo TUTTO lo storico come richiesto.
+        cursor_flights = self.db.flights.find({
+            "airport": {"$in": lista_aeroporti}
+        }).sort("timestamp", -1)  # Ordiniamo dai più recenti
+
+        # PASSO 3: "Appiattiamo" i risultati
+        # Poiché ogni record nel DB contiene una lista di voli nel campo "data",
+        # li estraiamo per fare una lista unica pulita.
+        lista_voli_completa = []
+        for doc in cursor_flights:
+            if "data" in doc and isinstance(doc["data"], list):
+                # Aggiungiamo i voli trovati alla lista risultato
+                lista_voli_completa.extend(doc["data"])
+
+        return lista_voli_completa
 
 mongo_db = MongoDB()

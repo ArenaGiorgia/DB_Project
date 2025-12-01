@@ -179,6 +179,27 @@ def add_interest():
     return jsonify({"messaggio": f"Interesse aggiunto e dati iniziali recuperati per {airport}"}), 200
 
 
+
+
+@app.route('/interests', methods=['DELETE'])
+def remove_interests():
+    """
+    Endpoint chiamato dallo User Manager quando un utente viene eliminato.
+    Uso: DELETE /interests?email=...
+    """
+    email = request.args.get('email')
+
+    if not email:
+        return jsonify({"errore": "Email mancante"}), 400
+
+    count = mongo_db.rimuovi_interessi_utente(email)
+
+    return jsonify({"messaggio": f"Rimossi {count} interessi per {email}"}), 200
+
+
+
+
+
 @app.route('/flights/last', methods=['GET'])
 def get_last_flight():
     airport = request.args.get('airport')
@@ -211,6 +232,29 @@ def get_average_flights():
         "days": days,
         "average_flights": media
     }), 200
+
+
+@app.route('/flights/my-interests', methods=['GET'])
+def get_my_interest_flights():
+    """
+    Restituisce tutti i voli salvati che corrispondono agli interessi dell'utente.
+    Uso: GET /flights/my-interests?email=mario@email.it
+    """
+    email = request.args.get('email')
+
+    if not email:
+        return jsonify({"errore": "Parametro email obbligatorio"}), 400
+
+    # 1. Recupero i voli dal DB usando la logica "Join"
+    voli = mongo_db.get_voli_di_interesse_utente(email)
+
+    # 2. Restituisco il JSON
+    return jsonify({
+        "user": email,
+        "total_flights_found": len(voli),
+        "flights": voli
+    }), 200
+
 
 
 if __name__ == '__main__':

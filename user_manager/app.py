@@ -2,11 +2,13 @@ import threading
 import grpc
 from concurrent import futures
 from flask import Flask, request, jsonify, abort
+import requests
 import hashlib
 import user_pb2
 import user_pb2_grpc
 from database_postgres import database_postgres
 from cache import Cache
+
 
 #Avvio la Cache Globale che dura 5 minuti = 300 secondi
 global_cache = Cache(ttl_seconds=300)
@@ -170,18 +172,27 @@ def delete_user():
         conn = database_postgres.get_connection()
         cur = conn.cursor()
         try:
-            # Cancello l'utente
+            # 1. CANCELLO DA POSTGRES
             cur.execute("DELETE FROM users WHERE email = %s AND password = %s", (email, pw_hash))
             conn.commit()
 
             if cur.rowcount > 0:
-                # --- PULIZIA CACHE PULITA ---
-                # Se l'eliminazione è ok, chiamo il metodo della classe Cache
+                # 2. PULIZIA CACHE (At-Most-Once)
                 if request_id:
                     global_cache.remove_response("REST_CLIENT", request_id)
-                # ----------------------------
 
-                return jsonify({"utente con email": email + " eliminato"}), 200
+                # 3. PULIZIA DATI ORFANI (Chiama Data Collector)
+                try:
+                    # 'data-collector' è il nome del servizio nel docker-compose
+                    url_clean = f"http://data-collector:5001/interests?email={email}"
+                    print(f"[CLEANUP] Richiedo cancellazione interessi a: {url_clean}")
+                    requests.delete(url_clean, timeout=2)
+                except Exception as e:
+                    # Se il Data Collector è giù, stampiamo solo un warning,
+                    # non blocchiamo la cancellazione dell'utente.
+                    print(f"[WARNING] Impossibile pulire interessi su Data Collector: {e}")
+
+                return jsonify({"message": "Utente eliminato e dati puliti", "email": email}), 200
             else:
                 abort(401, description="Credenziali errate o utente inesistente")
 

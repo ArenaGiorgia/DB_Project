@@ -3,3 +3,4 @@ grpcio
 grpcio-tools
 psycopg[binary]
 python-dotenv
+requests
