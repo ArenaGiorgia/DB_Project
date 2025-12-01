@@ -1,7 +1,7 @@
 # Sistema Distribuito di Monitoraggio Voli (DSBD Homework #1)
 
 **Corso:** Sistemi Distribuiti e Big Data (2025/2026)
-#
+
 **Progetto:** #HW1 - Microservizi per gestione utenti e monitoraggio voli aerei
 
 ## 📋 Descrizione del Progetto
