@@ -9,7 +9,6 @@ load_dotenv()
 class Database:
     def __init__(self):
         self.url = os.getenv("DATABASE_URL")
-        # Avvio il tentativo di connessione
         self.connection_db()
 
     def connection_db(self):
@@ -48,16 +47,15 @@ class Database:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """
-        #Creo il cursore che è un oggetto che esegue i comandi
+
         cursore = conn.cursor()
         cursore.execute(query)
-        #per salvare  le modifiche
         conn.commit()
-        #Chiudo il cursore
         cursore.close()
 
     def get_connection(self):
-        #fai una nuova connessione che ovviamente poi dobbiamo chiudere in app.py
+
+        #fa una nuova connessione che ovviamente poi dobbiamo chiudere in app.py
         return psycopg.connect(self.url)
 
 database_postgres= Database()

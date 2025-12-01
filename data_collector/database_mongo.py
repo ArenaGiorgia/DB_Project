@@ -20,7 +20,6 @@ class MongoDB:
                 self.client.admin.command('ping')
                 print("Connessione riuscita con MONGO")
                 self.db = self.client["flight_db"]
-                # Creo indici per velocizzare le ricerche
                 self.db.flights.create_index("airport")
                 self.db.flights.create_index("timestamp")
                 return
@@ -34,6 +33,7 @@ class MongoDB:
     def aggiungi_interesse(self, email, aeroporto):
 
         if self.db is None: return False
+
         # update_one' con upsert=True per evitare duplicati
         self.db.interests.update_one(
             {"user": email, "airport": aeroporto},
@@ -53,10 +53,10 @@ class MongoDB:
             return result.deleted_count
 
 
-
+    #Salva i dati scaricati dal monitoraggio ciclico
     def salva_voli(self, aeroporto, voli):
 
-        #Salva i dati scaricati dal monitoraggio ciclico
+
         if self.db is None: return None
         documento = {
             "airport": aeroporto,
@@ -68,30 +68,37 @@ class MongoDB:
         return str(res.inserted_id)
 
 
+    #Restituisce la lista degli aeroporti unici che interessano agli utenti
     def get_tutti_aeroporti_monitorati(self):
-        #Restituisce la lista degli aeroporti unici che interessano agli utenti
+
+
         if self.db is None: return []
+
         # Distinct mi dà la lista degli aeroporti senza duplicati
         return self.db.interests.distinct("airport")
 
 
+    #Recupera l'ultimo volo registrato per un aeroporto
     def get_ultimo_volo(self, aeroporto):
-        #Recupera l'ultimo volo registrato per un aeroporto
+
+
         if self.db is None: return None
 
-        # Cerca l'ultimo inserimento (sort timestamp decrescente)
+        # Cerca l'ultimo inserimento (timestamp decrescente)
         record = self.db.flights.find_one(
             {"airport": aeroporto, "count": {"$gt": 0}},  # Deve avere almeno un volo
             sort=[("timestamp", -1)]
         )
 
         if record and "data" in record and len(record["data"]) > 0:
+
             # Restituisce il primo volo della lista più recente
             return record["data"][0]
         return None
 
+    # Calcola la media voli degli ultimi X giorni
     def get_media_voli(self, aeroporto, giorni):
-        #Calcola la media voli degli ultimi X giorni [cite: 45, 46]
+
         if self.db is None: return 0
 
         now = time.time()
@@ -115,37 +122,33 @@ class MongoDB:
             return 0
 
         totale_voli = risultato[0]["totale_voli"]
+
         # Media = Totale Voli / Giorni
         return round(totale_voli / giorni, 2)
+
 
     def get_voli_di_interesse_utente(self, email):
 
         if self.db is None: return []
 
-        # PASSO 1: Trova gli aeroporti seguiti dall'utente
-        # Equivalente a: SELECT airport FROM interests WHERE user = email
+        #Trova gli aeroporti seguiti dall'utente
         interessi_cursor = self.db.interests.find({"user": email})
         lista_aeroporti = [doc["airport"] for doc in interessi_cursor]
 
         if not lista_aeroporti:
             return []  # L'utente non segue nessun aeroporto
 
-        # PASSO 2: Trova tutti i voli che matchano quegli aeroporti
-        # Equivalente a: SELECT * FROM flights WHERE airport IN (lista_aeroporti)
 
-        # Nota: Qui potremmo mettere un limite temporale (es. ultimi 7 giorni)
-        # ma per ora prendiamo TUTTO lo storico come richiesto.
+        #Trova tutti i voli che matchano quegli aeroporti
         cursor_flights = self.db.flights.find({
             "airport": {"$in": lista_aeroporti}
         }).sort("timestamp", -1)  # Ordiniamo dai più recenti
 
-        # PASSO 3: "Appiattiamo" i risultati
-        # Poiché ogni record nel DB contiene una lista di voli nel campo "data",
-        # li estraiamo per fare una lista unica pulita.
+
+        #estraiamo per fare una lista unica pulita.
         lista_voli_completa = []
         for doc in cursor_flights:
             if "data" in doc and isinstance(doc["data"], list):
-                # Aggiungiamo i voli trovati alla lista risultato
                 lista_voli_completa.extend(doc["data"])
 
         return lista_voli_completa

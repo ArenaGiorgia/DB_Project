@@ -1,18 +1,18 @@
 syntax = "proto3";
 
 service UserManager {
-  // Il Data Collector chiama questa funzione
+
   rpc CheckUser (CheckUserRequest) returns (CheckUserResponse);
 }
 
 message CheckUserRequest {
-  string client_id = 1;  // il Data Collector vede chi è il client e sfrutta il canale parlando con lo user manager
-  string message_id = 2; // ID univoco della richiesta (UUID)
-  string email = 3;      // L'email da verificare
+  string client_id = 1;  //client_id associato al microservice : DATA-COLLECTOR
+  string message_id = 2;
+  string email = 3;
 }
 
 message CheckUserResponse {
-  bool exists = 1;       // True se l'utente esiste, False altrimenti
+  bool exists = 1;
 }
 service DataCollector {
   rpc DeleteData (DeleteDataRequest) returns (DeleteDataResponse);

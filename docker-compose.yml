@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
 
- #Database degli utenti (PostgreSQL)
+ #Database utenti tramite PostgreSQL
   user-db:
     image: postgres:15-alpine
     container_name: user_db_container
@@ -15,7 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  #Database dei dati (MongoDB)
+  #Database dei dati tramite MongoDB
   data-db:
     image: mongo:6.0
     container_name: data_db_container
@@ -25,23 +25,22 @@ services:
       - mongo_data:/data/db
 
   user-manager:
-    build: ./user_manager  # Usa il Dockerfile dentro questa cartella
+    build: ./user_manager
     container_name: user_manager_service
     ports:
-      - "5000:5000"        # Mappa la porta 5000 del container alla 5000 del PC (per Postman)
-      - "50051:50051"      # Porta gRPC
+      - "5000:5000"        #porta 5000 del container alla 5000 per Postman
+      - "50051:50051"      #porta per il gRPC
     environment:
-      # Costruisce l'URL usando le variabili del file .env
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/${POSTGRES_DB}
     depends_on:
       - user-db
 
   data-collector:
-    build: ./data_collector # Usa il Dockerfile dentro questa cartella
+    build: ./data_collector
     container_name: data_collector_service
     ports:
-      - "5001:5001"         # Mappa la porta 5001 del container alla 5001 del PC (per Postman)
-      - "50052:50052"
+      - "5001:5001"         #porta 5001 del container alla 5001 per Postman
+      - "50052:50052"       #porta per il gRPC
     environment:
       - MONGO_URL=mongodb://data-db:27017/
       - USER_MANAGER_GRPC=user-manager:50051
