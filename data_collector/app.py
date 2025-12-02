@@ -93,14 +93,14 @@ def fetch_opensky_data(airport):
             if dati:
                 return dati
             else:
-                print(f"[OpenSky] Nessun volo trovato per {airport} nel periodo richiesto.")
+                print(f"Nessun volo trovato per {airport} nel periodo richiesto.")
         else:
-            print(f"[OpenSky Error] Status {r.status_code}: {r.text}")
+            print(f"Status {r.status_code}: {r.text}")
 
     except Exception as e:
         print(f"[OpenSky Exception] {e}")
 
-    #solo per scopi dimostrativi
+    # solo per scopi dimostrativi
     print(f"Generazione dati MOCK per {airport}")
     mock_flight = [{
         "icao24": "mock_id",
@@ -119,7 +119,7 @@ def fetch_opensky_data(airport):
     return mock_flight
 
 
-#task in background
+# task in background
 def monitoraggio_ciclico():
     print("Avvio Thread Monitoraggio Ciclico...")
     while True:
@@ -139,7 +139,7 @@ def monitoraggio_ciclico():
             time.sleep(60)
 
 
-#API REST
+# API REST
 @app.route('/interests', methods=['POST'])
 def add_interest():
     data = request.json
@@ -152,7 +152,27 @@ def add_interest():
     # 1. Verifica Utente via gRPC
     messaggio_univoco = str(uuid.uuid4())
     try:
-        with grpc.insecure_channel(USER_MANAGER_ADDRESS) as channel:
+        #Configuro il canale per riprovare se il server è giù
+        service_config = {
+            "methodConfig": [
+                {
+                    "name": [{"service": "UserManager"}],
+                    "timeout": "5s",                            #timeout totale
+                    "retryPolicy": {
+                        "maxAttempts": 5,                       #Riprovare massimo 5 volte
+                        "initialBackoff": "0.5s",               #Aspetta 0.5s al primo errore
+                        "maxBackoff": "2s",                     #massima attesa
+                        "backoffMultiplier": 2,                 #Raddoppia l'attesa ogni volta
+                        "retryableStatusCodes": ["UNAVAILABLE"] #Riprova solo se il server è irraggiungibile
+                    }
+                }
+            ]
+        }
+
+        options = [('grpc.service_config', json.dumps(service_config))] #mettere json.dumps se no da errore
+
+
+        with grpc.insecure_channel(USER_MANAGER_ADDRESS, options=options) as channel:
             stub = user_pb2_grpc.UserManagerStub(channel)
 
             grpc_req = user_pb2.CheckUserRequest(
@@ -188,10 +208,6 @@ def add_interest():
 
 @app.route('/interests', methods=['DELETE'])
 def remove_interests():
-    """
-    Endpoint chiamato dallo User Manager quando un utente viene eliminato.
-    Uso: DELETE /interests?email=...
-    """
     email = request.args.get('email')
 
     if not email:
@@ -211,7 +227,7 @@ def get_last_flight():
     if volo:
         if '_id' in volo: del volo['_id']
 
-        print(f"\n[DEBUG LAST FLIGHT] Ultimo volo trovato per {airport}:")
+        print(f"\n Ultimo volo trovato per {airport}:")
         print(json.dumps(volo, indent=4))
         print("-" * 30)
 
@@ -250,7 +266,6 @@ def get_average_flights():
 
 @app.route('/flights/my-interests', methods=['GET'])
 def get_my_interest_flights():
-
     email = request.args.get('email')
 
     if not email:

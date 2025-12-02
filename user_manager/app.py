@@ -7,6 +7,7 @@ import user_pb2
 import user_pb2_grpc
 from database_postgres import database_postgres
 from cache import Cache
+import json
 
 
 global_cache = Cache(ttl_seconds=300)
@@ -187,7 +188,27 @@ def delete_user():
                     #connettiamo alla porta 50052 configurata nel Data Collector
                     target_grpc = 'data-collector:50052'
 
-                    with grpc.insecure_channel(target_grpc) as channel:
+
+                    # Configuro il canale per riprovare se il server è giù
+                    service_config = {
+                        "methodConfig": [
+                            {
+                                "name": [{"service": "DataCollector"}],
+                                "timeout": "5s",                            #Timeout totale
+                                "retryPolicy": {
+                                    "maxAttempts": 5,                       #Riprovare massimo 5 volte
+                                    "initialBackoff": "0.5s",               #Aspetta 0.5s al primo errore
+                                    "maxBackoff": "2s",                     #massima attesa
+                                    "backoffMultiplier": 2,                 #Raddoppia l'attesa ogni volta
+                                    "retryableStatusCodes": ["UNAVAILABLE"] #Riprova solo se il server va giù
+                                }
+                            }
+                        ]
+                    }
+
+                    options = [('grpc.service_config', json.dumps(service_config))] #da errore se non lo passo con json.dumps
+
+                    with grpc.insecure_channel(target_grpc, options=options) as channel:
 
                         stub = user_pb2_grpc.DataCollectorStub(channel)
                         request_grpc = user_pb2.DeleteDataRequest(email=email)
