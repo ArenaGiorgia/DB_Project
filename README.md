@@ -153,5 +153,3 @@ Arena Giorgia
 
 Tornabene Alessio
 
-```
-```
